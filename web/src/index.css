@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --accent: oklch(0.66 0.21 28); /* tomato — overridden in app to follow user color */
+  }
+  html, body, #root { height: 100%; }
+  body {
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    font-size: 17px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection { background: var(--accent); color: white; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #D4D3CC; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #B6B6AE; }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full bg-ink-950 px-6 py-4 text-[15px] font-medium text-white transition relative overflow-hidden;
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-ghost {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full bg-transparent px-5 py-4 text-[15px] font-medium text-ink-900 transition;
+    border: 1px solid theme('colors.rule');
+  }
+  .btn-ghost:hover {
+    border-color: theme('colors.ink.700');
+  }
+  .btn-link {
+    @apply text-ink-700 hover:text-ink-950 transition;
+  }
+  .nav-cta {
+    @apply inline-flex items-center gap-2 rounded-full bg-ink-950 px-4 py-2.5 text-[14px] font-medium text-white transition;
+  }
+  .nav-cta:hover { transform: translateY(-1px); }
+
+  /* Eyebrow with leading rule */
+  .eyebrow {
+    @apply inline-flex items-center gap-2.5 font-mono text-[12px] uppercase tracking-widest text-ink-600;
+  }
+  .eyebrow::before {
+    content: ""; width: 24px; height: 1px; background: currentColor; opacity: 0.7;
+  }
+  .eyebrow .num { color: var(--accent); }
+
+  /* Brand mark — a tile that contains a thin line filling over time */
+  .brand-mark {
+    @apply relative inline-grid place-items-center overflow-hidden rounded-md bg-ink-950;
+    width: 22px; height: 22px;
+  }
+  .brand-mark::after {
+    content: ""; position: absolute; left: 3px; top: 9px; height: 2px; width: 16px;
+    background: var(--accent); border-radius: 2px;
+    animation: brand-fill 4s ease-in-out infinite;
+    transform-origin: left center;
+  }
+  @keyframes brand-fill {
+    0%, 100% { transform: scaleX(0); }
+    60%, 80% { transform: scaleX(1); }
+  }
+
+  /* Section dividers */
+  .section-rule {
+    height: 1px; background: #E7E6DF;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
