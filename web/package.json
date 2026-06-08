@@ -6,15 +6,21 @@
   "scripts": {
     "dev": "vite",
     "icons": "node scripts/generate-icons.mjs",
+    "tauri:icons": "node scripts/generate-tauri-icons.mjs",
     "prebuild": "npm run icons",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "npm run tauri:icons && tauri build"
   },
   "dependencies": {
+    "posthog-js": "^1.382.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
@@ -23,7 +29,7 @@
     "sharp": "^0.33.5",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^5.4.11",
+    "vite": "^8.0.16",
     "vite-plugin-pwa": "^0.21.0"
   }
 }

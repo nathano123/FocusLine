@@ -8,14 +8,13 @@ import {
   useTimerState,
 } from '../lib/timer'
 import { WeeklyHeatmap } from '../components/WeeklyHeatmap'
-import { MeetingPanel } from '../components/MeetingPanel'
 import { DndCard } from '../components/DndCard'
 import { TasksPanel } from '../components/TasksPanel'
 import { DayLine } from '../components/DayLine'
 import { CycleBar } from '../components/CycleBar'
 import { OnboardingFlow } from '../components/OnboardingFlow'
 import { usePlanState, computeProgress } from '../lib/plan'
-import type { MeetingSource } from '../lib/meeting'
+import { track, registerContext } from '../lib/track'
 
 const COLORS: { name: string; value: string }[] = [
   { name: 'Tomato', value: 'oklch(0.66 0.21 28)' },
@@ -49,7 +48,7 @@ type Settings = {
 
 const DEFAULT_SETTINGS: Settings = {
   color: COLORS[0].value,
-  thickness: THICKNESSES[1].value,
+  thickness: THICKNESSES[2].value,  // Bold (7px) — the line needs to be obvious by default
   workMinutes: 25,
   shortBreakMinutes: 5,
   longBreakMinutes: 15,
@@ -76,7 +75,6 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
   const [settings, setSettings] = useLocalState<Settings>('focusline:settings', DEFAULT_SETTINGS)
   const [history, setHistory] = useLocalState<SessionRecord[]>('focusline:history', [])
   const [cycleCount, setCycleCount] = useLocalState<number>('focusline:cycle', 0)
-  const [meetingSource, setMeetingSource] = useLocalState<MeetingSource>('focusline:meeting', { kind: 'none' })
   const [dndExpanded, setDndExpanded] = useLocalState<boolean>('focusline:dndExpanded', false)
   const [showStats, setShowStats] = useState(false)
   const [intention, setIntention] = useState('')
@@ -87,6 +85,17 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', settings.color)
   }, [settings.color])
+
+  // Attach current settings as super-properties so every event is sliceable
+  useEffect(() => {
+    registerContext({
+      color: settings.color,
+      thickness: settings.thickness,
+      pomodoro_mode: settings.pomodoroMode,
+      work_minutes: settings.workMinutes,
+    })
+  }, [settings.color, settings.thickness, settings.pomodoroMode, settings.workMinutes])
+
 
   // Tick for plan progress display
   useEffect(() => {
@@ -157,12 +166,17 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
         },
         ...prev.slice(0, 199),
       ])
+      track('timer_started', {
+        phase,
+        minutes,
+        has_intention: Boolean(intentionText && intentionText.trim()),
+      })
       if (phase === 'work' && settings.dndReminder) {
         setDndBanner(true)
         window.setTimeout(() => setDndBanner(false), 6000)
       }
     },
-    [setHistory, settings.dndReminder]
+    [setHistory, settings.dndReminder, settings.pomodoroMode]
   )
 
   const startWork = useCallback(
@@ -182,6 +196,10 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
         const [head, ...tail] = prev
         if (!head) return prev
         return [{ ...head, completed: true }, ...tail]
+      })
+      track('timer_completed', {
+        phase: finished.phase,
+        minutes: Math.round(finished.total / 60_000),
       })
       if (finished.phase === 'work') {
         playChime()
@@ -257,7 +275,13 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
       {/* The ambient line — fixed at the top. In plan mode, it's a segmented day-line. */}
       <div
         className="pointer-events-none fixed inset-x-0 top-0 z-50"
-        style={{ height: settings.thickness, background: '#E7E6DF' }}
+        style={{
+          // Enforce a visible minimum so the line never disappears, regardless of
+          // a thin choice in Appearance or stale localStorage.
+          height: Math.max(6, settings.thickness),
+          // Clearly visible track against cream paper, so users see WHERE the line is even at idle
+          background: '#C8C7BF',
+        }}
         aria-hidden
       >
         {planRunning ? (
@@ -268,7 +292,9 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
             style={{
               width: `${timerProgress * 100}%`,
               backgroundColor: settings.color,
-              boxShadow: state.running ? `0 0 12px ${settings.color}66` : 'none',
+              boxShadow: state.running
+                ? `0 0 16px ${settings.color}, 0 0 32px ${settings.color}88`
+                : 'none',
             }}
           />
         )}
@@ -298,7 +324,7 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
           <Chevron /> Home
         </button>
         <div className="flex items-center gap-1">
-          <button onClick={() => setShowStats((s) => !s)} className="rounded-full px-3 py-1.5 font-mono text-[12px] uppercase tracking-widest text-ink-600 hover:text-ink-900">
+          <button onClick={() => setShowStats(s => !s)} className="rounded-full px-3 py-1.5 font-mono text-[12px] uppercase tracking-widest text-ink-600 hover:text-ink-900">
             {showStats ? 'Hide stats' : 'Stats'}
           </button>
           <button onClick={toggleFullscreen} className="rounded-full px-3 py-1.5 font-mono text-[12px] uppercase tracking-widest text-ink-600 hover:text-ink-900">
@@ -329,15 +355,15 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
                     Pick a duration or start a day plan
                   </span>
                 ) : state.running ? (
-                  <button onClick={() => timerEngine.pause()} className="btn-primary py-2.5 text-sm">Pause</button>
+                  <button onClick={() => { timerEngine.pause() }} className="btn-primary py-2.5 text-sm">Pause</button>
                 ) : (
                   <>
-                    <button onClick={() => timerEngine.resume()} className="btn-primary py-2.5 text-sm">Resume</button>
-                    <button onClick={() => timerEngine.reset()} className="btn-ghost py-2.5 text-sm">Reset</button>
+                    <button onClick={() => { timerEngine.resume() }} className="btn-primary py-2.5 text-sm">Resume</button>
+                    <button onClick={() => { timerEngine.reset() }} className="btn-ghost py-2.5 text-sm">Reset</button>
                   </>
                 )}
                 {state.phase !== 'idle' && state.running && (
-                  <button onClick={() => timerEngine.reset()} className="rounded-full px-3 py-1.5 text-xs text-ink-500 hover:text-ink-900">
+                  <button onClick={() => { timerEngine.reset() }} className="rounded-full px-3 py-1.5 text-xs text-ink-500 hover:text-ink-900">
                     Cancel
                   </button>
                 )}
@@ -374,7 +400,7 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
               {PRESETS.map((m, i) => (
                 <button
                   key={m}
-                  onClick={() => startWork(m)}
+                  onClick={() => { startWork(m) }}
                   className="group rounded-2xl border border-rule bg-white px-4 py-5 text-left transition hover:border-ink-700"
                 >
                   <div className="text-2xl font-medium tracking-tight text-ink-950">
@@ -395,14 +421,14 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
               <h2 className="eyebrow"><span className="num">02</span>Pomodoro cycle</h2>
               <Toggle
                 checked={settings.pomodoroMode}
-                onChange={(v) => setSettings({ ...settings, pomodoroMode: v })}
+                onChange={(v) => { setSettings({ ...settings, pomodoroMode: v });  }}
                 label={settings.pomodoroMode ? 'On' : 'Off'}
               />
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3">
-              <NumberField label="Work" suffix="min" value={settings.workMinutes} onChange={(v) => setSettings({ ...settings, workMinutes: v })} />
-              <NumberField label="Short break" suffix="min" value={settings.shortBreakMinutes} onChange={(v) => setSettings({ ...settings, shortBreakMinutes: v })} />
-              <NumberField label="Long break" suffix="min" value={settings.longBreakMinutes} onChange={(v) => setSettings({ ...settings, longBreakMinutes: v })} />
+              <NumberField label="Work" suffix="min" value={settings.workMinutes} onChange={(v) => { setSettings({ ...settings, workMinutes: v });  }} />
+              <NumberField label="Short break" suffix="min" value={settings.shortBreakMinutes} onChange={(v) => { setSettings({ ...settings, shortBreakMinutes: v });  }} />
+              <NumberField label="Long break" suffix="min" value={settings.longBreakMinutes} onChange={(v) => { setSettings({ ...settings, longBreakMinutes: v });  }} />
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-600">
               <span>
@@ -410,12 +436,12 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
                 <input
                   type="number" min={2} max={12}
                   value={settings.cyclesBeforeLongBreak}
-                  onChange={(e) => setSettings({ ...settings, cyclesBeforeLongBreak: clamp(Number(e.target.value), 2, 12) })}
+                  onChange={(e) => { const v = clamp(Number(e.target.value), 2, 12); setSettings({ ...settings, cyclesBeforeLongBreak: v });  }}
                   className="mx-1 w-14 rounded-md border border-rule bg-white px-2 py-1 text-center text-ink-900 focus:border-ink-700 focus:outline-none"
                 />{' '}
                 work blocks
               </span>
-              <button onClick={() => startWork(settings.workMinutes)} className="btn-primary py-2.5 text-sm">
+              <button onClick={() => { startWork(settings.workMinutes) }} className="btn-primary py-2.5 text-sm">
                 Start Pomodoro
               </button>
             </div>
@@ -437,7 +463,7 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
                 {COLORS.map((c) => (
                   <button
                     key={c.value}
-                    onClick={() => setSettings({ ...settings, color: c.value })}
+                    onClick={() => { setSettings({ ...settings, color: c.value });  }}
                     aria-label={c.name}
                     className={`h-9 w-9 rounded-full border-2 p-[3px] transition hover:scale-105 ${
                       settings.color === c.value ? 'border-ink-950' : 'border-transparent'
@@ -454,7 +480,7 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
                 {THICKNESSES.map((t) => (
                   <button
                     key={t.value}
-                    onClick={() => setSettings({ ...settings, thickness: t.value })}
+                    onClick={() => { setSettings({ ...settings, thickness: t.value });  }}
                     className={`flex flex-col items-center gap-2 rounded-2xl border bg-white px-3 py-3.5 text-sm transition ${
                       settings.thickness === t.value ? 'border-ink-950' : 'border-rule hover:border-ink-600'
                     }`}
@@ -467,21 +493,18 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
             </div>
             <Toggle
               checked={settings.soundOn}
-              onChange={(v) => setSettings({ ...settings, soundOn: v })}
+              onChange={(v) => { setSettings({ ...settings, soundOn: v });  }}
               label="Play chime when a session or task ends"
             />
           </div>
         </section>
 
-        {/* Meeting countdown */}
-        <MeetingPanel source={meetingSource} setSource={setMeetingSource} accent={settings.color} />
-
         {/* DND helper */}
         <DndCard
           enabled={settings.dndReminder}
-          setEnabled={(v) => setSettings({ ...settings, dndReminder: v })}
+          setEnabled={(v) => { setSettings({ ...settings, dndReminder: v });  }}
           expanded={dndExpanded}
-          setExpanded={setDndExpanded}
+          setExpanded={(v) => { setDndExpanded(v);  }}
         />
 
         {/* Stats */}
@@ -498,7 +521,7 @@ export function TimerApp({ onExit }: { onExit: () => void }) {
             </div>
             <HistoryList history={history} />
             {history.length > 0 && (
-              <button onClick={() => setHistory([])} className="mt-4 font-mono text-[11px] uppercase tracking-widest text-ink-500 hover:text-ink-900">
+              <button onClick={() => { setHistory([]) }} className="mt-4 font-mono text-[11px] uppercase tracking-widest text-ink-500 hover:text-ink-900">
                 Clear history
               </button>
             )}
@@ -725,6 +748,8 @@ function computeStreak(history: SessionRecord[]): number {
 }
 
 function toggleFullscreen() {
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+  const entering = !document.fullscreenElement
+  if (!entering) document.exitFullscreen().catch(() => {})
   else document.documentElement.requestFullscreen().catch(() => {})
+  
 }

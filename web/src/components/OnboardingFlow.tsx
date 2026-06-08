@@ -10,6 +10,7 @@
 // All copy / spacing is taken from WebOnboarding artboard.
 
 import { useEffect, useRef, useState } from 'react'
+import { track } from '../lib/track'
 
 const COLORS: { name: string; value: string }[] = [
   { name: 'Tomato', value: 'oklch(0.66 0.21 28)' },
@@ -68,6 +69,7 @@ export function OnboardingFlow() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
     } catch { /* ignore */ }
     localStorage.setItem(STORAGE_KEY, 'true')
+    track('onboarding_completed', { pomodoro, notif_granted: notifGranted === 'granted' })
     setOpen(false)
     // Reload so TimerApp picks up the new settings via useLocalState's lazy init.
     // (useLocalState reads localStorage on first render only.)
@@ -76,6 +78,7 @@ export function OnboardingFlow() {
 
   const skip = () => {
     localStorage.setItem(STORAGE_KEY, 'true')
+    track('onboarding_skipped', { last_step: step })
     setOpen(false)
   }
 

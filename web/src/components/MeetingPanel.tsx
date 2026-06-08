@@ -110,7 +110,7 @@ function IcsForm({ source, setSource }: { source: MeetingSource; setSource: (s: 
       onSubmit={(e) => {
         e.preventDefault()
         const trimmed = url.trim()
-        if (trimmed) setSource({ kind: 'ics', url: trimmed })
+        if (trimmed) { setSource({ kind: 'ics', url: trimmed });  }
       }}
       className="mt-4 space-y-3"
     >
@@ -150,6 +150,7 @@ function ManualForm({ source, setSource }: { source: MeetingSource; setSource: (
         target.setHours(h, m, 0, 0)
         if (target.getTime() < Date.now()) target.setDate(target.getDate() + 1)
         setSource({ kind: 'manual', summary: summary || 'Meeting', startMs: target.getTime() })
+        
       }}
       className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]"
     >

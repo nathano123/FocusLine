@@ -9,6 +9,7 @@ import {
   usePlanState,
 } from '../lib/plan'
 import { DayLine } from './DayLine'
+import { track } from '../lib/track'
 
 export function TasksPanel({
   accent,
@@ -29,13 +30,14 @@ export function TasksPanel({
       onChimeRequested?.()
     })
     return () => planEngine.onComplete(null)
-  }, [onChimeRequested])
+  }, [onChimeRequested, state.tasks.length])
 
   const addTask = () => {
     const title = newTitle.trim()
     const minutes = Math.max(1, Math.min(600, Number(newMinutes) || 0))
     if (!title) return
     planEngine.addTask({ title, estimated: minutes })
+    
     setNewTitle('')
     setNewMinutes('25')
   }
@@ -97,13 +99,13 @@ export function TasksPanel({
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {state.paused ? (
-              <button onClick={() => planEngine.resume()} className="btn-primary py-2.5 text-sm">Resume</button>
+              <button onClick={() => { planEngine.resume() }} className="btn-primary py-2.5 text-sm">Resume</button>
             ) : (
-              <button onClick={() => planEngine.pause()} className="btn-primary py-2.5 text-sm">Pause</button>
+              <button onClick={() => { planEngine.pause() }} className="btn-primary py-2.5 text-sm">Pause</button>
             )}
-            <button onClick={() => planEngine.completeCurrent()} className="btn-ghost py-2.5 text-sm">Finish task</button>
-            <button onClick={() => planEngine.skip()} className="btn-ghost py-2.5 text-sm">Skip</button>
-            <button onClick={() => planEngine.cancel()} className="ml-auto text-xs text-ink-500 hover:text-ink-900">
+            <button onClick={() => { planEngine.completeCurrent() }} className="btn-ghost py-2.5 text-sm">Finish task</button>
+            <button onClick={() => { planEngine.skip() }} className="btn-ghost py-2.5 text-sm">Skip</button>
+            <button onClick={() => { planEngine.cancel() }} className="ml-auto text-xs text-ink-500 hover:text-ink-900">
               End plan
             </button>
           </div>
@@ -125,13 +127,13 @@ export function TasksPanel({
                 task={task}
                 isActive={i === state.activeIndex}
                 isLast={i === state.tasks.length - 1}
-                onCheck={(done) => planEngine.updateTask(task.id, { done })}
+                onCheck={(done) => { planEngine.updateTask(task.id, { done });  }}
                 onRename={(title) => planEngine.updateTask(task.id, { title })}
-                onMinutes={(est) => planEngine.updateTask(task.id, { estimated: est })}
-                onUp={() => planEngine.moveTask(task.id, -1)}
-                onDown={() => planEngine.moveTask(task.id, 1)}
-                onRemove={() => planEngine.removeTask(task.id)}
-                onStart={() => planEngine.startTaskAt(i)}
+                onMinutes={(est) => { planEngine.updateTask(task.id, { estimated: est });  }}
+                onUp={() => { planEngine.moveTask(task.id, -1);  }}
+                onDown={() => { planEngine.moveTask(task.id, 1);  }}
+                onRemove={() => { planEngine.removeTask(task.id);  }}
+                onStart={() => { planEngine.startTaskAt(i);  }}
                 planRunning={isRunning}
               />
             ))}
@@ -166,7 +168,17 @@ export function TasksPanel({
 
       {!isRunning && state.tasks.some(t => !t.done) && (
         <div className="flex items-center justify-end">
-          <button onClick={() => planEngine.startPlan()} className="btn-primary text-sm">
+          <button
+            onClick={() => {
+              const undone = state.tasks.filter(t => !t.done)
+              track('plan_started', {
+                task_count: undone.length,
+                total_minutes: undone.reduce((s, t) => s + t.estimated, 0),
+              })
+              planEngine.startPlan()
+            }}
+            className="btn-primary text-sm"
+          >
             Start day plan
             <ArrowRight />
           </button>

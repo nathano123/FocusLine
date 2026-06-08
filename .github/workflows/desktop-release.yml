@@ -1,0 +1,80 @@
+# Cross-build FocusLine desktop binaries on push of a v* tag.
+#
+# Result: a GitHub Release with `.dmg` (mac arm + intel), `.msi` + `.exe`
+# (Windows), `.deb` + `.AppImage` (Linux).
+#
+# The `tauri-action` step does the heavy lifting — building Rust on each
+# OS runner and bundling the installer.
+
+name: Build desktop binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'        # arm64
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'        # x64 (Intel)
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ contains(matrix.args, 'aarch64-apple-darwin') && 'aarch64-apple-darwin' || contains(matrix.args, 'x86_64-apple-darwin') && 'x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'web/src-tauri -> target'
+
+      - name: Install npm deps
+        working-directory: web
+        run: npm ci --legacy-peer-deps
+
+      - name: Build & release with Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Inject PostHog key at build time so the desktop binary tracks too.
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+        with:
+          projectPath: web
+          tagName: ${{ github.ref_name }}
+          releaseName: 'FocusLine ${{ github.ref_name }}'
+          releaseBody: |
+            See the changelog at https://github.com/nathano123/FocusLine/blob/main/CHANGELOG.md
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

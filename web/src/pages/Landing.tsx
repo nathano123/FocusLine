@@ -16,7 +16,7 @@ const THICKNESSES = [
 ]
 const DURATIONS = [5, 15, 25, 50]
 
-export function Landing({ onLaunch }: { onLaunch: () => void }) {
+export function Landing({ onLaunch }: { onLaunch: (source?: string) => void }) {
   return (
     <div className="bg-paper text-ink-900">
       <ScrollProgress />
@@ -41,7 +41,7 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
             don't stare at it.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-3.5">
-            <button onClick={onLaunch} className="btn-primary">
+            <button onClick={() => onLaunch('hero')} className="btn-primary">
               Launch FocusLine
               <ArrowRight />
             </button>
@@ -128,7 +128,7 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
               <li className="flex gap-3"><Tick />Glance the line and you know: how far, what's next</li>
               <li className="flex gap-3"><Tick />Skip, finish early, or pause without losing the plan</li>
             </ul>
-            <button onClick={onLaunch} className="btn-primary mt-8">
+            <button onClick={() => onLaunch('plan_section')} className="btn-primary mt-8">
               Plan your day
               <ArrowRight />
             </button>
@@ -205,7 +205,7 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
                 <span className="text-3xl font-medium tracking-tight">Free</span>
                 <span className="font-mono text-[11px] uppercase tracking-widest text-ink-600">MIT license</span>
               </div>
-              <button onClick={onLaunch} className="relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-ink-950 px-5 py-4 text-[15px] font-medium text-white">
+              <button onClick={() => onLaunch('download_section')} className="relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-ink-950 px-5 py-4 text-[15px] font-medium text-white">
                 <ArrowDown />
                 Launch web app
               </button>
@@ -261,7 +261,7 @@ export function Landing({ onLaunch }: { onLaunch: () => void }) {
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Nav({ onLaunch }: { onLaunch: () => void }) {
+function Nav({ onLaunch }: { onLaunch: (source?: string) => void }) {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -288,7 +288,7 @@ function Nav({ onLaunch }: { onLaunch: () => void }) {
           <a href="#features" className="hover:text-ink-950">Features</a>
           <a href="#download" className="hover:text-ink-950">Download</a>
         </div>
-        <button onClick={onLaunch} className="nav-cta">
+        <button onClick={() => onLaunch('nav')} className="nav-cta">
           Launch app
           <ArrowRight />
         </button>
@@ -493,7 +493,7 @@ function GoodCard() {
 }
 
 // ── Customizer ─────────────────────────────────────────────────────────────
-function Customizer({ onLaunch }: { onLaunch: () => void }) {
+function Customizer({ onLaunch }: { onLaunch: (source?: string) => void }) {
   const [colorIdx, setColorIdx] = useState(0)
   const [thickIdx, setThickIdx] = useState(1)
   const [duration, setDuration] = useState(25)
@@ -634,7 +634,7 @@ function Customizer({ onLaunch }: { onLaunch: () => void }) {
         <p className="m-0 font-mono text-[11px] uppercase tracking-widest text-ink-600">
           Preview is running 6× real-time. In the app it's smooth, second-by-second.
         </p>
-        <button onClick={onLaunch} className="mt-1 self-start font-mono text-[12px] uppercase tracking-widest text-ink-700 underline-offset-4 hover:text-ink-950 hover:underline">
+        <button onClick={() => onLaunch('button')} className="mt-1 self-start font-mono text-[12px] uppercase tracking-widest text-ink-700 underline-offset-4 hover:text-ink-950 hover:underline">
           Open the full app →
         </button>
       </div>
