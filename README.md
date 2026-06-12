@@ -50,7 +50,6 @@ The output in `dist/` is a fully static site (HTML/JS/CSS + service worker + man
 - **Pomodoro cycle**: work → short break → long break, with configurable durations and long-break cadence
 - **Appearance**: 8 colors, 4 thicknesses, all persisted
 - **Today stats** + **12-week heatmap**: completed sessions, total focus time, day streak, GitHub-style activity grid
-- **Meeting countdown**: paste an iCal feed URL (Google Calendar works) or enter a manual time — the line counts down to the next meeting
 - **Do Not Disturb helper**: platform-aware setup instructions for macOS Focus, iOS Focus, Android DND, Windows Focus assist, plus a start-of-session reminder banner
 - **Local-only storage** — nothing leaves your device, no accounts, no tracking
 - **Web Notifications** when sessions end (with optional chime)

@@ -200,23 +200,20 @@ export function Landing({ onLaunch }: { onLaunch: (source?: string) => void }) {
                 <span>↳ v1.0</span>
               </div>
             </div>
-            <div className="flex flex-col gap-4 rounded-2xl bg-white p-6 text-ink-950">
+            <div className="flex flex-col gap-3 rounded-2xl bg-white p-6 text-ink-950">
               <div className="flex items-baseline justify-between">
                 <span className="text-3xl font-medium tracking-tight">Free</span>
                 <span className="font-mono text-[11px] uppercase tracking-widest text-ink-600">MIT license</span>
               </div>
-              <button onClick={() => onLaunch('download_section')} className="relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-ink-950 px-5 py-4 text-[15px] font-medium text-white">
-                <ArrowDown />
-                Launch web app
+
+              {/* Primary: native desktop downloads (direct, no GitHub redirect) */}
+              <DownloadCta os="mac" />
+              <DownloadCta os="windows" />
+              <DownloadCta os="linux" />
+
+              <button onClick={() => onLaunch('download_section')} className="mt-2 inline-flex items-center justify-center gap-2 rounded-full border border-rule px-5 py-3 text-[14px] font-medium text-ink-900 hover:border-ink-700">
+                Or use the web app
               </button>
-              <a
-                href="https://github.com/nathano123/FocusLine/releases"
-                target="_blank"
-                rel="noreferrer"
-                className="text-center font-mono text-[11px] uppercase tracking-widest text-ink-600 hover:text-ink-900"
-              >
-                Download for macOS →
-              </a>
             </div>
           </div>
         </div>
@@ -362,14 +359,6 @@ function ArrowRight() {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
       <path d="M3 7h8m0 0L7 3m4 4l-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function ArrowDown() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M7 2v8m0 0l-3-3m3 3l3-3M2 12h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -993,6 +982,84 @@ function ShortcutRow({ keyLabel, desc }: { keyLabel: string; desc: string }) {
       <span className="w-16 shrink-0 font-mono text-[12px] text-ink-600">{keyLabel}</span>
       <span className="text-ink-800">{desc}</span>
     </div>
+  )
+}
+
+// ── Download CTA buttons ───────────────────────────────────────────────────
+// Direct-download links via the `download` attribute. The file is served
+// straight from the same origin so there's no GitHub redirect.
+
+function DownloadCta({ os }: { os: 'mac' | 'windows' | 'linux' }) {
+  const meta = {
+    mac:     { href: '/FocusLine-1.0.0-mac.dmg', available: true,  label: 'Download for macOS',   sub: 'Universal · 741 KB · menubar app' },
+    windows: { href: '',                          available: false, label: 'Windows',              sub: 'Coming in v1.1 — use the web app' },
+    linux:   { href: '',                          available: false, label: 'Linux',                sub: 'Coming in v1.1 — use the web app' },
+  }[os]
+
+  // Detect the user's OS to highlight the matching button
+  const [userOs, setUserOs] = useState<'mac' | 'windows' | 'linux' | 'other'>('other')
+  useEffect(() => {
+    const ua = navigator.userAgent
+    if (/Mac/.test(ua)) setUserOs('mac')
+    else if (/Win/.test(ua)) setUserOs('windows')
+    else if (/Linux/.test(ua) && !/Android/.test(ua)) setUserOs('linux')
+  }, [])
+
+  const primary = userOs === os && meta.available
+
+  if (!meta.available) {
+    return (
+      <div
+        aria-disabled="true"
+        className="inline-flex cursor-default items-center justify-between gap-3 rounded-full border border-dashed border-rule bg-paper-2 px-5 py-3 text-[14px] font-medium text-ink-500"
+      >
+        <span className="flex items-center gap-2.5">
+          <OsGlyph os={os} />
+          {meta.label}
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-widest text-ink-400">
+          {meta.sub}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <a
+      href={meta.href}
+      download
+      className={
+        primary
+          ? 'group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full bg-ink-950 px-5 py-3.5 text-[15px] font-medium text-white transition hover:bg-ink-800'
+          : 'group inline-flex items-center justify-between gap-3 rounded-full border border-rule bg-white px-5 py-3 text-[14px] font-medium text-ink-800 transition hover:border-ink-700 hover:text-ink-950'
+      }
+    >
+      <span className="flex items-center gap-2.5">
+        <OsGlyph os={os} />
+        {meta.label}
+      </span>
+      <span className={`font-mono text-[10px] uppercase tracking-widest ${primary ? 'text-white/60' : 'text-ink-500'}`}>
+        {meta.sub}
+      </span>
+    </a>
+  )
+}
+
+function OsGlyph({ os }: { os: 'mac' | 'windows' | 'linux' }) {
+  if (os === 'mac') return (
+    <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor">
+      <path d="M10.5 8.2c.02-2 1.66-3 1.74-3.05-.95-1.38-2.42-1.57-2.94-1.6-1.25-.12-2.44.74-3.08.74-.64 0-1.62-.72-2.66-.7-1.37.02-2.63.79-3.34 2.02-1.42 2.46-.36 6.1 1.02 8.1.67.98 1.47 2.08 2.52 2.04 1.01-.04 1.4-.66 2.62-.66 1.23 0 1.57.66 2.65.64 1.1-.02 1.79-.99 2.46-1.97.78-1.13 1.1-2.22 1.12-2.28-.03-.01-2.13-.82-2.15-3.24zm-2-5.95c.56-.67.93-1.6.83-2.52-.8.03-1.78.54-2.35 1.2-.51.6-.96 1.55-.84 2.45.89.07 1.8-.45 2.36-1.13z" />
+    </svg>
+  )
+  if (os === 'windows') return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M0 2.5L6.7 1.6v6.4H0V2.5zm0 11v-4.6h6.7v5.5L0 13.5zM7.4 8H16V0L7.4 1.2V8zm0 7.5L16 14.7V8.7H7.4v6.8z" />
+    </svg>
+  )
+  return (
+    <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor">
+      <path d="M6.5 0a.5.5 0 00-.5.5v1A.5.5 0 005.5 2H4a2 2 0 00-2 2v8a3 3 0 003 3h4a3 3 0 003-3V4a2 2 0 00-2-2h-1.5a.5.5 0 00-.5-.5v-1a.5.5 0 00-.5-.5h-1zm-1 3h3a.5.5 0 010 1h-3a.5.5 0 010-1zM4 6h6v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" />
+    </svg>
   )
 }
 

@@ -41,6 +41,9 @@ Icon?
 web/src-tauri/target/
 web/src-tauri/gen/
 
+# Compiled Swift binary (rebuilt by swiftc; the .dmg in web/public is the artifact we ship)
+macos/FocusLine
+
 # TS build info
 **/*.tsbuildinfo
 

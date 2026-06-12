@@ -3,6 +3,25 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Proxy /ingest to PostHog EU in local dev so behavior matches production
+  // (where vercel.json does the same). Defeats ad blockers because requests
+  // appear same-origin in the network tab.
+  server: {
+    proxy: {
+      '/ingest/static': {
+        target: 'https://eu-assets.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest\/static/, '/static'),
+        secure: true,
+      },
+      '/ingest': {
+        target: 'https://eu.i.posthog.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ingest/, ''),
+        secure: true,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

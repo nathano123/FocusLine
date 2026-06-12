@@ -3,5 +3,10 @@
   "buildCommand": "cd web && npm install --legacy-peer-deps && npm run build",
   "outputDirectory": "web/dist",
   "installCommand": "echo 'install handled in buildCommand'",
-  "framework": "vite"
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/ingest/static/:path*", "destination": "https://eu-assets.i.posthog.com/static/:path*" },
+    { "source": "/ingest/:path*",        "destination": "https://eu.i.posthog.com/:path*" },
+    { "source": "/:path((?!ingest).*)",  "destination": "/index.html" }
+  ]
 }
